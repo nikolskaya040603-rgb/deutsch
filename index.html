@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Finde das Paar! — German Memory</title>
+<style>
+:root{--pink:#d9468f;--pink-light:#fce7f3;--ink:#312536;--muted:#766b78;--paper:#fffafd;--line:#eadce6;--green:#198754;--blue:#6d5ce8}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(135deg,#fff7fb,#f4f0ff);font-family:Arial,Helvetica,sans-serif;color:var(--ink);min-height:100vh}
+main{max-width:1100px;margin:auto;padding:24px 16px 40px}
+header{text-align:center;margin-bottom:20px}
+.kicker{letter-spacing:.12em;text-transform:uppercase;font-size:.78rem;color:var(--pink);font-weight:800}
+h1{margin:8px 0 6px;font-size:clamp(2rem,5vw,3rem)}
+.subtitle{margin:0;color:var(--muted)}
+.panel{background:#ffffffd9;border:1px solid var(--line);border-radius:20px;padding:16px;margin:14px 0;box-shadow:0 8px 24px #57344a0a}
+.controls{display:flex;flex-wrap:wrap;gap:12px;align-items:end;justify-content:space-between}
+.control-group{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+label{font-size:.9rem;font-weight:700}
+select,button{font:inherit;border-radius:12px;border:1px solid var(--line);padding:10px 13px;background:white;color:var(--ink)}
+button{cursor:pointer;font-weight:700;transition:transform .12s,box-shadow .12s}
+button:hover{transform:translateY(-1px);box-shadow:0 4px 12px #57344a12}
+button.primary{background:var(--pink);border-color:var(--pink);color:white}
+button.secondary{background:#f6f1ff;border-color:#e4dcff}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:14px}
+.stat{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px;text-align:center}
+.stat span{display:block;font-size:.78rem;color:var(--muted);margin-bottom:4px}
+.stat strong{font-size:1.25rem}
+.players{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.player{padding:8px 12px;border:1px solid var(--line);border-radius:999px;background:white;font-size:.9rem}
+.player.active{background:var(--pink-light);border-color:var(--pink);font-weight:800}
+.board{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin-top:16px}
+.card{border:0;padding:0;min-height:100px;position:relative;perspective:700px;background:transparent;box-shadow:none}
+.card:hover{box-shadow:none;transform:translateY(-2px)}
+.card-inner{position:absolute;inset:0;transition:transform .35s;transform-style:preserve-3d}
+.card.flipped .card-inner,.card.matched .card-inner{transform:rotateY(180deg)}
+.face{position:absolute;inset:0;border-radius:15px;display:flex;align-items:center;justify-content:center;text-align:center;padding:9px;backface-visibility:hidden;border:1px solid var(--line);overflow-wrap:anywhere}
+.back{background:linear-gradient(145deg,#d9468f,#8e5ae8);color:white;font-size:1.8rem;font-weight:900;border:1px solid #ffffff88}
+.front{transform:rotateY(180deg);background:#fff;color:var(--ink);font-size:1rem;font-weight:800;line-height:1.25}
+.card[data-kind="ru"] .front{background:#fff8fc}
+.card.matched .front{background:#e5f7ec;border-color:#9bd4b0;color:#12653c}
+.card:disabled{cursor:default;opacity:1}
+.message{min-height:28px;text-align:center;font-weight:700;margin:14px 0 0}
+.message.good{color:var(--green)}.message.info{color:var(--blue)}
+.rules h2{margin:0 0 8px;font-size:1.1rem}
+.rules ol{margin:0;padding-left:22px;color:#514653;line-height:1.6}
+footer{text-align:center;color:var(--muted);font-size:.8rem;margin-top:18px}
+@media(max-width:800px){.board{grid-template-columns:repeat(5,minmax(0,1fr))}.card{min-height:88px}}
+@media(max-width:560px){main{padding:16px 10px 28px}.board{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.card{min-height:88px}.front{font-size:.9rem}.stats{gap:6px}.stat{padding:10px 5px}.stat strong{font-size:1.05rem}}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <div class="kicker">Deutsch · A1 · Gruppenspiel</div>
+  <h1>Finde das Paar! 🃏</h1>
+  <p class="subtitle">Переворачивай карточки и находи немецкий глагол и его перевод.</p>
+</header>
+
+<section class="panel">
+  <div class="controls">
+    <div class="control-group">
+      <label for="playerCount">Игроков:</label>
+      <select id="playerCount">
+        <option value="2">2 игрока</option><option value="3">3 игрока</option>
+        <option value="4" selected>4 игрока</option><option value="5">5 игроков</option>
+        <option value="6">6 игроков</option>
+      </select>
+      <label for="pairCount">Пар:</label>
+      <select id="pairCount">
+        <option value="8">8 пар · лёгкий раунд</option>
+        <option value="10">10 пар</option>
+        <option value="15" selected>15 пар · все глаголы</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <button class="secondary" id="restart">🔀 Перемешать заново</button>
+    </div>
+  </div>
+  <div class="stats">
+    <div class="stat"><span>Ход игрока</span><strong id="turnLabel">Игрок 1</strong></div>
+    <div class="stat"><span>Найдено пар</span><strong id="pairsLabel">0 / 15</strong></div>
+    <div class="stat"><span>Всего ходов</span><strong id="movesLabel">0</strong></div>
+  </div>
+  <div class="players" id="players"></div>
+  <div class="message" id="message" aria-live="polite">Игрок 1 начинает! Открой первую карточку.</div>
+</section>
+
+<section class="board" id="board" aria-label="Игровые карточки"></section>
+
+<section class="panel rules">
+  <h2>Как играть</h2>
+  <ol>
+    <li>Игроки ходят по очереди и открывают две карточки.</li>
+    <li>Нашёл немецкое слово и его перевод — забираешь пару и получаешь 1 балл. Можно ходить ещё раз.</li>
+    <li>Не совпало? Запомни карточки, закрой их и передай ход следующему игроку.</li>
+    <li>Когда все пары найдены, выигрывает игрок с наибольшим количеством пар.</li>
+  </ol>
+</section>
+<footer>Подсказка для ведущего: попроси игрока произнести найденный глагол вслух и назвать форму du или er/sie/es.</footer>
+</main>
+<script>
+const vocabulary = [
+  ["fahren","ехать"],
+  ["schlafen","спать"],
+  ["laufen","бегать; ходить пешком"],
+  ["tragen","носить"],
+  ["waschen","мыть"],
+  ["sehen","видеть"],
+  ["lesen","читать"],
+  ["sprechen","говорить"],
+  ["essen","есть; кушать"],
+  ["nehmen","брать"],
+  ["geben","давать"],
+  ["helfen","помогать"],
+  ["treffen","встречать(ся)"],
+  ["vergessen","забывать"],
+  ["empfehlen","рекомендовать"]
+];
+const board = document.getElementById('board');
+const playerCount = document.getElementById('playerCount');
+const pairCount = document.getElementById('pairCount');
+const turnLabel = document.getElementById('turnLabel');
+const pairsLabel = document.getElementById('pairsLabel');
+const movesLabel = document.getElementById('movesLabel');
+const playersBox = document.getElementById('players');
+const message = document.getElementById('message');
+let players=[], current=0, cards=[], selected=[], lock=false, moves=0, found=0, mismatchTimer=null;
+
+function shuffle(arr){ for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}return arr; }
+function init(){
+  if(mismatchTimer) clearTimeout(mismatchTimer);
+  current=0;selected=[];lock=false;moves=0;found=0;
+  const count=Number(pairCount.value);
+  players=Array.from({length:Number(playerCount.value)},(_,i)=>({name:`Игрок ${i+1}`,score:0}));
+  const chosen=shuffle([...vocabulary]).slice(0,count);
+  cards=shuffle(chosen.flatMap((pair,i)=>[
+    {id:`${i}-de`,pairId:i,kind:'de',text:pair[0]},
+    {id:`${i}-ru`,pairId:i,kind:'ru',text:pair[1]}
+  ]));
+  renderBoard();renderPlayers();updateStats();
+  setMessage(`${players[0].name} начинает! Открой первую карточку.`,'info');
+}
+function renderBoard(){
+  board.innerHTML='';
+  cards.forEach((card,index)=>{
+    const btn=document.createElement('button');
+    btn.className='card';btn.type='button';btn.dataset.index=index;btn.dataset.kind=card.kind;
+    btn.setAttribute('aria-label',`Карточка ${index+1}, закрыта`);
+    btn.innerHTML=`<span class="card-inner"><span class="face back">?</span><span class="face front"></span></span>`;
+    btn.querySelector('.front').textContent=card.text;
+    btn.addEventListener('click',()=>flip(index,btn));
+    board.appendChild(btn);
+  });
+}
+function renderPlayers(){
+  playersBox.innerHTML='';
+  players.forEach((p,i)=>{
+    const el=document.createElement('div');
+    el.className='player'+(i===current?' active':'');
+    el.id=`player-${i}`;
+    el.textContent=`${p.name}: ${p.score} ${p.score===1?'пара':'пар'}`;
+    playersBox.appendChild(el);
+  });
+}
+function updateStats(){
+  turnLabel.textContent=players[current]?.name||'—';
+  pairsLabel.textContent=`${found} / ${Number(pairCount.value)}`;
+  movesLabel.textContent=moves;
+  renderPlayers();
+}
+function setMessage(text,type=''){
+  message.textContent=text;message.className='message '+type;
+}
+function flip(index,btn){
+  if(lock||btn.classList.contains('flipped')||btn.classList.contains('matched'))return;
+  btn.classList.add('flipped');btn.setAttribute('aria-label',cards[index].text);
+  selected.push({index,card:cards[index],btn});
+  if(selected.length===2){
+    moves++;updateStats();
+    const [a,b]=selected;
+    if(a.card.pairId===b.card.pairId && a.card.kind!==b.card.kind){
+      a.btn.classList.add('matched');b.btn.classList.add('matched');
+      a.btn.disabled=true;b.btn.disabled=true;
+      found++;players[current].score++;selected=[];updateStats();
+      if(found===Number(pairCount.value)){
+        const max=Math.max(...players.map(p=>p.score));
+        const winners=players.filter(p=>p.score===max).map(p=>p.name);
+        setMessage(`🎉 Игра окончена! ${winners.length>1?'Ничья: '+winners.join(' и '):'Победитель — '+winners[0]}! Собрано пар: ${max}.`,'good');
+      }else{
+        setMessage(`Правильно! ${players[current].name} получает пару и ходит ещё раз.`, 'good');
+      }
+    }else{
+      lock=true;
+      setMessage('Не совпало! Запомни карточки — сейчас они закроются.','info');
+      mismatchTimer=setTimeout(()=>{
+        selected.forEach(item=>{item.btn.classList.remove('flipped');item.btn.setAttribute('aria-label','Карточка закрыта');});
+        selected=[];current=(current+1)%players.length;lock=false;updateStats();
+        setMessage(`Теперь ходит ${players[current].name}. Открой две карточки.`,'info');
+      },1050);
+    }
+  }else{
+    setMessage(`${players[current].name}: выбери вторую карточку.`,'info');
+  }
+}
+document.getElementById('restart').addEventListener('click',init);
+playerCount.addEventListener('change',init);
+pairCount.addEventListener('change',init);
+init();
+</script>
+</body>
+</html>
